@@ -67,26 +67,27 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     result['桶装精酿'] = int(barrel_df['出品数量'].sum())
     
     # ===== 方法2: 瓦猫猫听装精酿 =====
-    # 商品分类为招牌精酿瓦猫猫的酒，排除1L规格
+    # 商品分类为招牌精酿瓦猫猫的酒，排除1L规格和二销套餐
     wamao_filter = base_df['商品分类'].astype(str) == '招牌精酿瓦猫猫的酒'
     wamao_filter = wamao_filter & ~base_df['商品名称'].astype(str).str.contains(r'（1L）|\(1L\)', regex=True, na=False)
+    wamao_filter = wamao_filter & ~base_df['所属套餐'].astype(str).str.contains('二销', na=False)
     wamao_df = base_df[wamao_filter]
     total_bottles = wamao_df['出品数量'].sum()
     result['瓦猫猫听装精酿'] = round(total_bottles / 12)
     
     # ===== 方法3: 鸡尾酒套餐 =====
-    # 商品分类为特调鸡尾酒，商品类型为单品，排除12杯，排除半价
+    # 商品分类为特调鸡尾酒，商品类型为单品，排除12杯，排除半价(售价=原价一半)
     cocktail_filter = base_df['商品分类'].astype(str) == '特调鸡尾酒'
     cocktail_filter = cocktail_filter & (base_df['商品类型'].astype(str) == '单品')
     cocktail_filter = cocktail_filter & ~base_df['商品名称'].astype(str).str.contains('12杯', na=False)
     
-    # 排除半价：实付总额 = 商品原价 / 2
+    # 排除半价：商品售价 = 商品原价 / 2
     def is_half_price(row):
         try:
             original_price = float(row.get('商品原价', 0))
-            actual_paid = float(row.get('实付总额', 0))
-            if original_price > 0 and actual_paid > 0:
-                return abs(actual_paid - original_price / 2) < 0.01
+            selling_price = float(row.get('商品售价', 0))
+            if original_price > 0 and selling_price > 0:
+                return abs(selling_price - original_price / 2) < 0.01
             return False
         except:
             return False
@@ -99,14 +100,14 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     snack_filter = base_df['商品分类'].astype(str) == '小吃套餐'
     snack_df = base_df[snack_filter]
     
-    # 59元小吃套餐/小吃A套餐 (正常59元，排除49元二销)
+    # 59元小吃套餐/小吃A套餐 (正常59元)
     filter_59 = snack_df['商品名称'].astype(str).str.contains('59元小吃套餐|小吃A套餐', na=False)
     filter_59_normal = filter_59 & (snack_df['实付总额'].astype(float) != 49.0)
-    result['小吃套餐(59元-正常)'] = int(snack_df[filter_59_normal]['出品数量'].sum())
+    result['小吃套餐(59元)'] = int(snack_df[filter_59_normal]['出品数量'].sum())
     
-    # 59元小吃套餐/小吃A套餐 (49元) - 二销套餐
+    # 59元小吃套餐/小吃A套餐 (实付49元) - 二销套餐
     filter_59_49 = filter_59 & (snack_df['实付总额'].astype(float) == 49.0)
-    result['小吃套餐(49元)'] = int(snack_df[filter_59_49]['出品数量'].sum())
+    result['小吃二销套餐'] = int(snack_df[filter_59_49]['出品数量'].sum())
     
     # 79元小吃套餐/小吃B套餐
     filter_79 = snack_df['商品名称'].astype(str).str.contains('79元小吃套餐|小吃B套餐', na=False)
@@ -117,7 +118,7 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     result['小吃套餐(99元)'] = int(snack_df[filter_99]['出品数量'].sum())
     
     # ===== 方法5: 1升装精酿双拼套餐 =====
-    # 商品分类为招牌精酿瓦猫猫的酒，商品类型为套餐下单品，包含1L
+    # 商品分类为招牌精酿瓦猫猫的酒，商品类型为套餐下单品，商品名称包含(1L)
     double_filter = base_df['商品分类'].astype(str) == '招牌精酿瓦猫猫的酒'
     double_filter = double_filter & (base_df['商品类型'].astype(str) == '套餐下单品')
     double_filter = double_filter & base_df['商品名称'].astype(str).str.contains(r'（1L）|\(1L\)', regex=True, na=False)
@@ -153,271 +154,107 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     return result
 
 
-# ============ GUI应用 - 扁平化设计 ============
+# ============ GUI应用 ============
 
 class CommissionCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("提成计算器 - 门店点餐订单报表分析工具")
-        self.root.geometry("1100x700")
-        self.root.resizable(True, True)
+        self.root.geometry("1000x700")
         
         self.selected_files = []
         self.results = {}
         
-        self.setup_styles()
         self.setup_ui()
     
-    def setup_styles(self):
-        # 扁平化配色方案 - 清新蓝白
-        self.colors = {
-            'bg': '#f5f7fa',           # 浅灰背景
-            'white': '#ffffff',          # 纯白
-            'primary': '#1890ff',        # 主色蓝
-            'primary_hover': '#40a9ff',  # 主色悬停
-            'success': '#52c41a',        # 成功绿
-            'warning': '#faad14',        # 警告黄
-            'danger': '#ff4d4f',         # 危险红
-            'text': '#333333',           # 主文字
-            'text_secondary': '#666666', # 次要文字
-            'border': '#e8e8e8',         # 边框
-        }
-        
-        style = ttk.Style()
-        style.theme_use('clam')
-        
-        self.root.configure(bg=self.colors['bg'])
-        
-        # 按钮样式
-        style.configure('Primary.TButton',
-            font=('Microsoft YaHei', 10),
-            background=self.colors['primary'],
-            foreground='white',
-            borderwidth=0,
-            focuscolor='none')
-        style.map('Primary.TButton',
-            background=[('active', self.colors['primary_hover'])])
-        
-        style.configure('Success.TButton',
-            font=('Microsoft YaHei', 10),
-            background=self.colors['success'],
-            foreground='white',
-            borderwidth=0,
-            focuscolor='none')
-        
-        style.configure('Warning.TButton',
-            font=('Microsoft YaHei', 10),
-            background=self.colors['warning'],
-            foreground='white',
-            borderwidth=0,
-            focuscolor='none')
-        
-        style.configure('Secondary.TButton',
-            font=('Microsoft YaHei', 10),
-            background='#ffffff',
-            foreground=self.colors['text'],
-            borderwidth=1,
-            bordercolor=self.colors['border'],
-            focuscolor='none')
-        style.map('Secondary.TButton',
-            background=[('active', '#f0f0f0')])
-        
-        # 框架样式
-        style.configure('Card.TLabelframe',
-            background=self.colors['white'],
-            bordercolor=self.colors['border'],
-            borderwidth=1)
-        style.configure('Card.TLabelframe.Label',
-            font=('Microsoft YaHei', 11),
-            background=self.colors['white'],
-            foreground=self.colors['text'])
-        
-        # 表格样式
-        style.configure('Treeview',
-            background=self.colors['white'],
-            foreground=self.colors['text'],
-            fieldbackground=self.colors['white'],
-            borderwidth=1,
-            bordercolor=self.colors['border'],
-            font=('Microsoft YaHei', 10))
-        style.map('Treeview',
-            background=[('selected', self.colors['primary'])],
-            foreground=[('selected', 'white')])
-        
-        style.configure('Treeview.Heading',
-            background='#fafafa',
-            foreground=self.colors['text'],
-            font=('Microsoft YaHei', 10, 'bold'),
-            borderwidth=0)
-    
     def setup_ui(self):
-        # 顶部标题栏
-        header = tk.Frame(self.root, bg=self.colors['white'], height=60)
-        header.pack(fill='x')
-        header.pack_propagate(False)
-        
+        """设置UI界面"""
+        # 标题
         title_label = tk.Label(
-            header,
-            text="提成计算器",
-            font=('Microsoft YaHei', 20, 'bold'),
-            bg=self.colors['white'],
-            fg=self.colors['primary']
+            self.root, 
+            text="提成计算器", 
+            font=("Microsoft YaHei", 24, "bold"),
+            fg="#2C3E50"
         )
-        title_label.pack(side='left', padx=20)
+        title_label.pack(pady=20)
         
-        subtitle = tk.Label(
-            header,
-            text="门店点餐订单报表统计分析",
-            font=('Microsoft YaHei', 11),
-            bg=self.colors['white'],
-            fg=self.colors['text_secondary']
-        )
-        subtitle.pack(side='left', padx=10)
+        # 文件选择区域
+        file_frame = ttk.LabelFrame(self.root, text="选择文件", padding=10)
+        file_frame.pack(fill="x", padx=20, pady=10)
         
-        # 主内容区
-        main = tk.Frame(self.root, bg=self.colors['bg'])
-        main.pack(fill='both', expand=True, padx=20, pady=20)
-        
-        # 工具栏
-        toolbar = tk.Frame(main, bg=self.colors['white'], padx=15, pady=12)
-        toolbar.pack(fill='x', pady=(0, 15))
-        
-        self.select_btn = tk.Button(
-            toolbar,
-            text="选择文件",
-            font=('Microsoft YaHei', 10),
-            bg=self.colors['primary'],
-            fg='white',
-            bd=0,
-            padx=18,
-            pady=8,
-            cursor='hand2',
+        self.select_btn = ttk.Button(
+            file_frame, 
+            text="选择CSV文件", 
             command=self.select_files
         )
-        self.select_btn.pack(side='left', padx=5)
+        self.select_btn.pack(side="left", padx=5)
         
-        self.clear_btn = tk.Button(
-            toolbar,
-            text="清空",
-            font=('Microsoft YaHei', 10),
-            bg='#ffffff',
-            fg=self.colors['text'],
-            bd=1,
-            relief='solid',
-            padx=18,
-            pady=8,
-            cursor='hand2',
+        self.clear_btn = ttk.Button(
+            file_frame, 
+            text="清空", 
             command=self.clear_files
         )
-        self.clear_btn.pack(side='left', padx=5)
+        self.clear_btn.pack(side="left", padx=5)
         
-        self.calc_btn = tk.Button(
-            toolbar,
-            text="计算提成",
-            font=('Microsoft YaHei', 10),
-            bg=self.colors['success'],
-            fg='white',
-            bd=0,
-            padx=18,
-            pady=8,
-            cursor='hand2',
-            state='disabled',
-            command=self.calculate
+        self.calc_btn = ttk.Button(
+            file_frame, 
+            text="计算提成", 
+            command=self.calculate,
+            state="disabled"
         )
-        self.calc_btn.pack(side='left', padx=5)
+        self.calc_btn.pack(side="left", padx=5)
         
-        self.export_btn = tk.Button(
-            toolbar,
-            text="导出Excel",
-            font=('Microsoft YaHei', 10),
-            bg=self.colors['warning'],
-            fg='white',
-            bd=0,
-            padx=18,
-            pady=8,
-            cursor='hand2',
-            state='disabled',
-            command=self.export_excel
+        self.export_btn = ttk.Button(
+            file_frame, 
+            text="导出Excel", 
+            command=self.export_excel,
+            state="disabled"
         )
-        self.export_btn.pack(side='left', padx=5)
+        self.export_btn.pack(side="left", padx=5)
         
-        # 文件列表卡片
-        file_card = tk.LabelFrame(
-            main,
-            text="已选文件",
-            font=('Microsoft YaHei', 10, 'bold'),
-            bg=self.colors['white'],
-            fg=self.colors['text'],
-            bd=1,
-            relief='flat',
-            padx=15,
-            pady=10
-        )
-        file_card.pack(fill='x', pady=(0, 15))
-        
+        # 文件列表
         self.file_listbox = tk.Listbox(
-            file_card,
-            height=4,
-            font=('Microsoft YaHei', 10),
-            bg='#fafafa',
-            fg=self.colors['text'],
-            bd=0,
-            highlightthickness=1,
-            highlightcolor=self.colors['primary'],
-            highlightbackground=self.colors['border'],
-            selectbackground=self.colors['primary'],
-            selectforeground='white'
+            self.root, 
+            height=8,
+            font=("Microsoft YaHei", 10)
         )
-        self.file_listbox.pack(fill='x')
+        self.file_listbox.pack(fill="x", padx=20, pady=5)
         
-        # 结果表格卡片
-        result_card = tk.LabelFrame(
-            main,
-            text="统计结果",
-            font=('Microsoft YaHei', 10, 'bold'),
-            bg=self.colors['white'],
-            fg=self.colors['text'],
-            bd=1,
-            relief='flat',
-            padx=15,
-            pady=10
-        )
-        result_card.pack(fill='both', expand=True)
+        # 结果显示区域
+        result_frame = ttk.LabelFrame(self.root, text="计算结果", padding=10)
+        result_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
+        # 创建表格
         columns = ("门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", 
                    "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌")
-        
         self.result_tree = ttk.Treeview(
-            result_card, 
+            result_frame, 
             columns=columns, 
             show="headings",
-            height=10,
-            style='Treeview'
+            height=12
         )
         
+        # 设置列
         for col in columns:
             self.result_tree.heading(col, text=col)
-            self.result_tree.column(col, width=80, anchor="center")
+            self.result_tree.column(col, width=100, anchor="center")
         
-        scrollbar = ttk.Scrollbar(result_card, orient="vertical", command=self.result_tree.yview)
+        # 滚动条
+        scrollbar = ttk.Scrollbar(result_frame, orient="vertical", command=self.result_tree.yview)
         self.result_tree.configure(yscrollcommand=scrollbar.set)
         
         self.result_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # 底部状态栏
-        status = tk.Frame(main, bg=self.colors['white'], padx=15, pady=8)
-        status.pack(fill='x', pady=(15, 0))
-        
+        # 状态栏
         self.status_var = tk.StringVar(value="请选择CSV文件")
         self.status_label = tk.Label(
-            status, 
+            self.root, 
             textvariable=self.status_var,
-            font=('Microsoft YaHei', 9),
-            bg=self.colors['white'],
-            fg=self.colors['text_secondary']
+            font=("Microsoft YaHei", 9),
+            fg="#7F8C8D"
         )
-        self.status_label.pack(side='left')
+        self.status_label.pack(pady=5)
     
     def select_files(self):
         """选择文件"""
@@ -473,7 +310,7 @@ class CommissionCalculatorApp:
                     result.get('桶装精酿', 0),
                     result.get('瓦猫猫听装精酿', 0),
                     result.get('鸡尾酒套餐', 0),
-                    result.get('小吃套餐(59元-正常)', 0),
+                    result.get('小吃套餐(59元)', 0),
                     result.get('小吃套餐(79元)', 0),
                     result.get('小吃套餐(99元)', 0),
                     result.get('1升装精酿双拼套餐', 0),
@@ -536,7 +373,7 @@ class CommissionCalculatorApp:
                 ws.cell(row_idx, 2, data.get('桶装精酿', 0))
                 ws.cell(row_idx, 3, data.get('瓦猫猫听装精酿', 0))
                 ws.cell(row_idx, 4, data.get('鸡尾酒套餐', 0))
-                ws.cell(row_idx, 5, data.get('小吃套餐(59元-正常)', 0))
+                ws.cell(row_idx, 5, data.get('小吃套餐(59元)', 0))
                 ws.cell(row_idx, 6, data.get('小吃套餐(79元)', 0))
                 ws.cell(row_idx, 7, data.get('小吃套餐(99元)', 0))
                 ws.cell(row_idx, 8, data.get('1升装精酿双拼套餐', 0))
