@@ -421,7 +421,7 @@ class CommissionCalculatorApp:
         )
         
         for col in columns:
-            self.result_tree.heading(col, text=col, style='Treeview.Heading')
+            self.result_tree.heading(col, text=col)
             self.result_tree.column(col, width=90, anchor="center")
         
         # 滚动条
