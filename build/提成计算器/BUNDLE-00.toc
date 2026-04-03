@@ -1,0 +1,1 @@
+([('提成计算器', '/Users/chen/commission_calculator/dist/提成计算器', 'EXECUTABLE')],)
