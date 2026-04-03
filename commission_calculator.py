@@ -153,13 +153,13 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     return result
 
 
-# ============ GUI应用 - 现代精酿风格界面 ============
+# ============ GUI应用 - 扁平化设计 ============
 
 class CommissionCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("提成计算器 - 门店点餐订单报表分析工具")
-        self.root.geometry("1200x800")
+        self.root.geometry("1100x700")
         self.root.resizable(True, True)
         
         self.selected_files = []
@@ -169,209 +169,185 @@ class CommissionCalculatorApp:
         self.setup_ui()
     
     def setup_styles(self):
-        # 精酿酒吧风格配色方案
+        # 扁平化配色方案 - 清新蓝白
         self.colors = {
-            'bg_dark': '#1a1a2e',           # 深色背景
-            'bg_medium': '#16213e',           # 中等背景
-            'bg_light': '#0f3460',           # 浅色背景
-            'accent': '#e94560',             # 珊瑚红强调色
-            'accent_amber': '#f39c12',       # 琥珀金色
-            'text': '#eaeaea',                # 主文字
-            'text_muted': '#a0a0a0',         # 次要文字
-            'success': '#27ae60',            # 成功绿
-            'border': '#2d3a4f',             # 边框色
+            'bg': '#f5f7fa',           # 浅灰背景
+            'white': '#ffffff',          # 纯白
+            'primary': '#1890ff',        # 主色蓝
+            'primary_hover': '#40a9ff',  # 主色悬停
+            'success': '#52c41a',        # 成功绿
+            'warning': '#faad14',        # 警告黄
+            'danger': '#ff4d4f',         # 危险红
+            'text': '#333333',           # 主文字
+            'text_secondary': '#666666', # 次要文字
+            'border': '#e8e8e8',         # 边框
         }
         
         style = ttk.Style()
         style.theme_use('clam')
         
-        # 主窗口背景
-        self.root.configure(bg=self.colors['bg_dark'])
+        self.root.configure(bg=self.colors['bg'])
         
-        # Label 样式
-        style.configure('Title.TLabel',
-            font=('Microsoft YaHei', 28, 'bold'),
-            background=self.colors['bg_dark'],
-            foreground=self.colors['accent_amber'])
-        
-        style.configure('Subtitle.TLabel',
-            font=('Microsoft YaHei', 12),
-            background=self.colors['bg_dark'],
-            foreground=self.colors['text_muted'])
-        
-        style.configure('Status.TLabel',
+        # 按钮样式
+        style.configure('Primary.TButton',
             font=('Microsoft YaHei', 10),
-            background=self.colors['bg_dark'],
-            foreground=self.colors['text_muted'])
-        
-        # 按钮样式 - 强调色
-        style.configure('Accent.TButton',
-            font=('Microsoft YaHei', 11, 'bold'),
-            background=self.colors['accent'],
+            background=self.colors['primary'],
             foreground='white',
             borderwidth=0,
             focuscolor='none')
-        style.map('Accent.TButton',
-            background=[('active', '#c73e54'), ('pressed', '#d63e54')])
+        style.map('Primary.TButton',
+            background=[('active', self.colors['primary_hover'])])
         
-        # 按钮样式 - 次要
-        style.configure('Secondary.TButton',
-            font=('Microsoft YaHei', 10),
-            background=self.colors['bg_light'],
-            foreground=self.colors['text'],
-            borderwidth=0,
-            focuscolor='none')
-        style.map('Secondary.TButton',
-            background=[('active', '#1a4a7a'), ('pressed', '#0f3460')])
-        
-        # 按钮样式 - 成功
         style.configure('Success.TButton',
-            font=('Microsoft YaHei', 11, 'bold'),
+            font=('Microsoft YaHei', 10),
             background=self.colors['success'],
             foreground='white',
             borderwidth=0,
             focuscolor='none')
-        style.map('Success.TButton',
-            background=[('active', '#2ecc71'), ('pressed', '#27ae60')])
+        
+        style.configure('Warning.TButton',
+            font=('Microsoft YaHei', 10),
+            background=self.colors['warning'],
+            foreground='white',
+            borderwidth=0,
+            focuscolor='none')
+        
+        style.configure('Secondary.TButton',
+            font=('Microsoft YaHei', 10),
+            background='#ffffff',
+            foreground=self.colors['text'],
+            borderwidth=1,
+            bordercolor=self.colors['border'],
+            focuscolor='none')
+        style.map('Secondary.TButton',
+            background=[('active', '#f0f0f0')])
         
         # 框架样式
         style.configure('Card.TLabelframe',
-            background=self.colors['bg_medium'],
+            background=self.colors['white'],
             bordercolor=self.colors['border'],
             borderwidth=1)
         style.configure('Card.TLabelframe.Label',
-            font=('Microsoft YaHei', 12, 'bold'),
-            background=self.colors['bg_medium'],
-            foreground=self.colors['accent_amber'])
+            font=('Microsoft YaHei', 11),
+            background=self.colors['white'],
+            foreground=self.colors['text'])
         
         # 表格样式
         style.configure('Treeview',
-            background=self.colors['bg_medium'],
+            background=self.colors['white'],
             foreground=self.colors['text'],
-            fieldbackground=self.colors['bg_medium'],
-            borderwidth=0,
+            fieldbackground=self.colors['white'],
+            borderwidth=1,
+            bordercolor=self.colors['border'],
             font=('Microsoft YaHei', 10))
         style.map('Treeview',
-            background=[('selected', self.colors['accent'])],
+            background=[('selected', self.colors['primary'])],
             foreground=[('selected', 'white')])
         
         style.configure('Treeview.Heading',
-            background=self.colors['bg_light'],
-            foreground=self.colors['accent_amber'],
+            background='#fafafa',
+            foreground=self.colors['text'],
             font=('Microsoft YaHei', 10, 'bold'),
             borderwidth=0)
-        style.map('Treeview.Heading',
-            background=[('active', self.colors['bg_medium'])])
     
     def setup_ui(self):
-        # 主容器
-        main_container = tk.Frame(self.root, bg=self.colors['bg_dark'])
-        main_container.pack(fill='both', expand=True, padx=20, pady=20)
-        
-        # 标题区域
-        header = tk.Frame(main_container, bg=self.colors['bg_dark'])
-        header.pack(fill='x', pady=(0, 20))
+        # 顶部标题栏
+        header = tk.Frame(self.root, bg=self.colors['white'], height=60)
+        header.pack(fill='x')
+        header.pack_propagate(False)
         
         title_label = tk.Label(
             header,
-            text="🍺 提成计算器",
-            font=('Microsoft YaHei', 28, 'bold'),
-            bg=self.colors['bg_dark'],
-            fg=self.colors['accent_amber']
+            text="提成计算器",
+            font=('Microsoft YaHei', 20, 'bold'),
+            bg=self.colors['white'],
+            fg=self.colors['primary']
         )
-        title_label.pack(side='left')
+        title_label.pack(side='left', padx=20)
         
         subtitle = tk.Label(
             header,
-            text="门店点餐订单报表自动统计分析",
-            font=('Microsoft YaHei', 12),
-            bg=self.colors['bg_dark'],
-            fg=self.colors['text_muted']
+            text="门店点餐订单报表统计分析",
+            font=('Microsoft YaHei', 11),
+            bg=self.colors['white'],
+            fg=self.colors['text_secondary']
         )
-        subtitle.pack(side='left', padx=15, pady=15)
+        subtitle.pack(side='left', padx=10)
         
-        # 卡片式操作区域
-        card = tk.LabelFrame(
-            main_container,
-            text="📁 文件操作",
-            font=('Microsoft YaHei', 12, 'bold'),
-            bg=self.colors['bg_medium'],
-            fg=self.colors['accent_amber'],
-            bd=1,
-            relief='flat',
-            padx=20,
-            pady=15
-        )
-        card.pack(fill='x', pady=(0, 15))
+        # 主内容区
+        main = tk.Frame(self.root, bg=self.colors['bg'])
+        main.pack(fill='both', expand=True, padx=20, pady=20)
         
-        btn_container = tk.Frame(card, bg=self.colors['bg_medium'])
-        btn_container.pack()
+        # 工具栏
+        toolbar = tk.Frame(main, bg=self.colors['white'], padx=15, pady=12)
+        toolbar.pack(fill='x', pady=(0, 15))
         
         self.select_btn = tk.Button(
-            btn_container,
-            text="📂 选择CSV文件",
-            font=('Microsoft YaHei', 11, 'bold'),
-            bg=self.colors['accent'],
+            toolbar,
+            text="选择文件",
+            font=('Microsoft YaHei', 10),
+            bg=self.colors['primary'],
             fg='white',
             bd=0,
-            padx=20,
-            pady=10,
+            padx=18,
+            pady=8,
             cursor='hand2',
             command=self.select_files
         )
-        self.select_btn.pack(side='left', padx=8)
+        self.select_btn.pack(side='left', padx=5)
         
         self.clear_btn = tk.Button(
-            btn_container,
-            text="🗑️ 清空",
+            toolbar,
+            text="清空",
             font=('Microsoft YaHei', 10),
-            bg=self.colors['bg_light'],
+            bg='#ffffff',
             fg=self.colors['text'],
-            bd=0,
-            padx=15,
-            pady=10,
+            bd=1,
+            relief='solid',
+            padx=18,
+            pady=8,
             cursor='hand2',
             command=self.clear_files
         )
-        self.clear_btn.pack(side='left', padx=8)
+        self.clear_btn.pack(side='left', padx=5)
         
         self.calc_btn = tk.Button(
-            btn_container,
-            text="📊 计算提成",
-            font=('Microsoft YaHei', 11, 'bold'),
+            toolbar,
+            text="计算提成",
+            font=('Microsoft YaHei', 10),
             bg=self.colors['success'],
             fg='white',
             bd=0,
-            padx=20,
-            pady=10,
+            padx=18,
+            pady=8,
             cursor='hand2',
             state='disabled',
             command=self.calculate
         )
-        self.calc_btn.pack(side='left', padx=8)
+        self.calc_btn.pack(side='left', padx=5)
         
         self.export_btn = tk.Button(
-            btn_container,
-            text="📥 导出Excel",
-            font=('Microsoft YaHei', 11, 'bold'),
-            bg=self.colors['accent_amber'],
+            toolbar,
+            text="导出Excel",
+            font=('Microsoft YaHei', 10),
+            bg=self.colors['warning'],
             fg='white',
             bd=0,
-            padx=20,
-            pady=10,
+            padx=18,
+            pady=8,
             cursor='hand2',
             state='disabled',
             command=self.export_excel
         )
-        self.export_btn.pack(side='left', padx=8)
+        self.export_btn.pack(side='left', padx=5)
         
-        # 文件列表区域
+        # 文件列表卡片
         file_card = tk.LabelFrame(
-            main_container,
-            text="📋 已选文件",
-            font=('Microsoft YaHei', 12, 'bold'),
-            bg=self.colors['bg_medium'],
-            fg=self.colors['accent_amber'],
+            main,
+            text="已选文件",
+            font=('Microsoft YaHei', 10, 'bold'),
+            bg=self.colors['white'],
+            fg=self.colors['text'],
             bd=1,
             relief='flat',
             padx=15,
@@ -381,26 +357,26 @@ class CommissionCalculatorApp:
         
         self.file_listbox = tk.Listbox(
             file_card,
-            height=5,
+            height=4,
             font=('Microsoft YaHei', 10),
-            bg=self.colors['bg_dark'],
+            bg='#fafafa',
             fg=self.colors['text'],
             bd=0,
             highlightthickness=1,
-            highlightcolor=self.colors['accent'],
+            highlightcolor=self.colors['primary'],
             highlightbackground=self.colors['border'],
-            selectbackground=self.colors['accent'],
+            selectbackground=self.colors['primary'],
             selectforeground='white'
         )
         self.file_listbox.pack(fill='x')
         
-        # 结果显示区域
+        # 结果表格卡片
         result_card = tk.LabelFrame(
-            main_container,
-            text="📈 统计结果",
-            font=('Microsoft YaHei', 12, 'bold'),
-            bg=self.colors['bg_medium'],
-            fg=self.colors['accent_amber'],
+            main,
+            text="统计结果",
+            font=('Microsoft YaHei', 10, 'bold'),
+            bg=self.colors['white'],
+            fg=self.colors['text'],
             bd=1,
             relief='flat',
             padx=15,
@@ -408,7 +384,6 @@ class CommissionCalculatorApp:
         )
         result_card.pack(fill='both', expand=True)
         
-        # 表格
         columns = ("门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", 
                    "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌")
         
@@ -422,26 +397,25 @@ class CommissionCalculatorApp:
         
         for col in columns:
             self.result_tree.heading(col, text=col)
-            self.result_tree.column(col, width=90, anchor="center")
+            self.result_tree.column(col, width=80, anchor="center")
         
-        # 滚动条
         scrollbar = ttk.Scrollbar(result_card, orient="vertical", command=self.result_tree.yview)
         self.result_tree.configure(yscrollcommand=scrollbar.set)
         
         self.result_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # 状态栏
-        status_frame = tk.Frame(main_container, bg=self.colors['bg_dark'])
-        status_frame.pack(fill='x', pady=(15, 0))
+        # 底部状态栏
+        status = tk.Frame(main, bg=self.colors['white'], padx=15, pady=8)
+        status.pack(fill='x', pady=(15, 0))
         
-        self.status_var = tk.StringVar(value="💡 请选择CSV文件开始统计")
+        self.status_var = tk.StringVar(value="请选择CSV文件")
         self.status_label = tk.Label(
-            status_frame, 
+            status, 
             textvariable=self.status_var,
-            font=('Microsoft YaHei', 10),
-            bg=self.colors['bg_dark'],
-            fg=self.colors['text_muted']
+            font=('Microsoft YaHei', 9),
+            bg=self.colors['white'],
+            fg=self.colors['text_secondary']
         )
         self.status_label.pack(side='left')
     
