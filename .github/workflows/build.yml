@@ -1,4 +1,4 @@
-name: Build Windows Executable
+name: Build and Release Windows Executable
 
 on:
   workflow_dispatch:
@@ -33,10 +33,11 @@ jobs:
         path: dist/提成计算器.exe
     
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: dist/提成计算器.exe
-        draft: true
+        tag_name: windows-build
+        name: "提成计算器 Windows 版本"
+        draft: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
