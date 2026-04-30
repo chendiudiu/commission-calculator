@@ -232,8 +232,8 @@ class CommissionCalculatorApp:
         result_frame.pack(fill="both", expand=True, padx=20, pady=10)
         
         # 创建表格
-        columns = ("门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", 
-                   "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌", "特色斗酒36杯")
+        columns = ("门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", "特色斗酒36杯",
+                   "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌")
         self.result_tree = ttk.Treeview(
             result_frame, 
             columns=columns, 
@@ -317,6 +317,7 @@ class CommissionCalculatorApp:
                     result.get('桶装精酿', 0),
                     result.get('瓦猫猫听装精酿', 0),
                     result.get('鸡尾酒套餐', 0),
+                    result.get('特色斗酒36杯', 0),
                     result.get('小吃套餐(59元)', 0),
                     result.get('小吃套餐(79元)', 0),
                     result.get('小吃套餐(99元)', 0),
@@ -324,8 +325,7 @@ class CommissionCalculatorApp:
                     result.get('瓦猫猫二销套餐', 0),
                     result.get('小吃二销套餐', 0),
                     result.get('奔富', 0),
-                    result.get('点歌', 0),
-                    result.get('特色斗酒36杯', 0)
+                    result.get('点歌', 0)
                 ))
             
             self.status_var.set(f"计算完成，共处理 {len(self.results)} 个门店")
@@ -367,8 +367,8 @@ class CommissionCalculatorApp:
             ws.merge_cells('A1:M1')
             
             # 表头
-            headers = ["门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", 
-                      "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌", "特色斗酒36杯"]
+            headers = ["门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", "特色斗酒36杯",
+                      "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌"]
             for idx, header in enumerate(headers, 1):
                 cell = ws.cell(3, idx, header)
                 cell.font = Font(bold=True)
@@ -381,15 +381,15 @@ class CommissionCalculatorApp:
                 ws.cell(row_idx, 2, data.get('桶装精酿', 0))
                 ws.cell(row_idx, 3, data.get('瓦猫猫听装精酿', 0))
                 ws.cell(row_idx, 4, data.get('鸡尾酒套餐', 0))
-                ws.cell(row_idx, 5, data.get('小吃套餐(59元)', 0))
-                ws.cell(row_idx, 6, data.get('小吃套餐(79元)', 0))
-                ws.cell(row_idx, 7, data.get('小吃套餐(99元)', 0))
-                ws.cell(row_idx, 8, data.get('1升装精酿双拼套餐', 0))
-                ws.cell(row_idx, 9, data.get('瓦猫猫二销套餐', 0))
-                ws.cell(row_idx, 10, data.get('小吃二销套餐', 0))
-                ws.cell(row_idx, 11, data.get('奔富', 0))
-                ws.cell(row_idx, 12, data.get('点歌', 0))
-                ws.cell(row_idx, 13, data.get('特色斗酒36杯', 0))
+                ws.cell(row_idx, 5, data.get('特色斗酒36杯', 0))
+                ws.cell(row_idx, 6, data.get('小吃套餐(59元)', 0))
+                ws.cell(row_idx, 7, data.get('小吃套餐(79元)', 0))
+                ws.cell(row_idx, 8, data.get('小吃套餐(99元)', 0))
+                ws.cell(row_idx, 9, data.get('1升装精酿双拼套餐', 0))
+                ws.cell(row_idx, 10, data.get('瓦猫猫二销套餐', 0))
+                ws.cell(row_idx, 11, data.get('小吃二销套餐', 0))
+                ws.cell(row_idx, 12, data.get('奔富', 0))
+                ws.cell(row_idx, 13, data.get('点歌', 0))
             
             # 列宽
             ws.column_dimensions['A'].width = 20
