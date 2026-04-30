@@ -132,12 +132,6 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     erxiao_df = base_df[erxiao_filter]
     result['瓦猫猫二销套餐'] = round(erxiao_df['出品数量'].sum() / 24)
     
-    # ===== 方法7: 小吃二销套餐 =====
-    # 59元小吃套餐实付为49元的
-    filter_59 = snack_df['商品名称'].astype(str).str.contains('59元小吃套餐|小吃A套餐', na=False)
-    filter_49 = filter_59 & (snack_df['实付总额'].astype(float) == 49.0)
-    result['小吃二销套餐'] = int(snack_df[filter_49]['出品数量'].sum())
-    
     # ===== 方法8: 奔富 =====
     # 商品名称包含奔富，商品类型为单品或套餐下单品
     penfolds_filter = base_df['商品名称'].astype(str).str.contains('奔富', na=False)
