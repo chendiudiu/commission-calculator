@@ -80,6 +80,7 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     cocktail_filter = base_df['商品分类'].astype(str) == '特调鸡尾酒'
     cocktail_filter = cocktail_filter & (base_df['商品类型'].astype(str) == '单品')
     cocktail_filter = cocktail_filter & ~base_df['商品名称'].astype(str).str.contains('12杯', na=False)
+    cocktail_filter = cocktail_filter & ~base_df['商品名称'].astype(str).str.contains('轰炸机', na=False)
     
     # 排除半价：商品售价 = 商品原价 / 2
     def is_half_price(row):
