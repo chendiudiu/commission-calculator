@@ -1,11 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_all
+
+openpyxl_datas, openpyxl_binaries, openpyxl_hiddenimports = collect_all('openpyxl')
+et_xmlfile_datas, et_xmlfile_binaries, et_xmlfile_hiddenimports = collect_all('et_xmlfile')
+
 a = Analysis(
     ['commission_calculator.py'],
     pathex=[],
-    binaries=[],
-    datas=[],
-    hiddenimports=[],
+    binaries=openpyxl_binaries + et_xmlfile_binaries,
+    datas=openpyxl_datas + et_xmlfile_datas,
+    hiddenimports=openpyxl_hiddenimports + et_xmlfile_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -25,7 +30,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
