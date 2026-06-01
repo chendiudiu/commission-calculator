@@ -11,12 +11,18 @@ from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 from datetime import datetime
 
+APP_FONT_FAMILY = "PingFang SC" if os.name == "posix" and hasattr(os, "uname") and os.uname().sysname == "Darwin" else "Microsoft YaHei"
+
 
 # ============ 核心计算逻辑 ============
 
 # 排除的支付方式
 EXCLUDED_PAYMENT_METHODS = [
     '打折支付', '礼品券兑换', '会员支付（赠送）', '赠送商品', '会员积分兑换'
+]
+
+PLATFORM_EXCLUDED_PAYMENT_METHODS = [
+    '抖音支付', '美团支付', '快手支付'
 ]
 
 
@@ -94,7 +100,8 @@ def calculate_commission(df: pd.DataFrame) -> dict:
             return False
     
     cocktail_df = base_df[cocktail_filter]
-    cocktail_df = cocktail_df[~cocktail_df.apply(is_half_price, axis=1)]
+    if not cocktail_df.empty:
+        cocktail_df = cocktail_df[~cocktail_df.apply(is_half_price, axis=1)]
     result['鸡尾酒套餐'] = int(cocktail_df['出品数量'].sum())
     
     # ===== 方法4: 小吃套餐 =====
@@ -146,12 +153,40 @@ def calculate_commission(df: pd.DataFrame) -> dict:
     diange_df = base_df[diange_filter]
     result['点歌'] = int(diange_df['出品数量'].sum())
     
-    # ===== 方法10: 特色斗酒36杯 =====
+    # ===== 方法10: 点舞 =====
+    # 商品名称包含点舞
+    dianwu_filter = base_df['商品名称'].astype(str).str.contains('点舞', na=False)
+    dianwu_df = base_df[dianwu_filter]
+    result['点舞'] = int(dianwu_df['出品数量'].sum())
+    
+    # ===== 方法11: 特色斗酒36杯 =====
     # 商品分类为特色斗酒，商品名称包含36杯
     doujiu_filter = base_df['商品分类'].astype(str).str.contains('特色斗酒', na=False)
     doujiu_filter = doujiu_filter & base_df['商品名称'].astype(str).str.contains('36杯', na=False)
     doujiu_df = base_df[doujiu_filter]
     result['特色斗酒36杯'] = int(doujiu_df['出品数量'].sum())
+    
+    # ===== 方法11: 平台线下套餐 =====
+    # 商品分类为平台线下套餐，按商品售价分桶
+    platform_filter = base_df['商品分类'].astype(str) == '平台线下套餐'
+    platform_df = base_df[platform_filter]
+    platform_df = platform_df[~platform_df['支付方式'].astype(str).isin(PLATFORM_EXCLUDED_PAYMENT_METHODS)]
+    
+    # 99元
+    p_99 = platform_df[platform_df['商品售价'].astype(float) == 99.0]
+    result['平台线下套餐(99元)'] = int(p_99['出品数量'].sum())
+    
+    # 100-200元
+    p_100_200 = platform_df[(platform_df['商品售价'].astype(float) >= 100.0) & (platform_df['商品售价'].astype(float) <= 200.0)]
+    result['平台线下套餐(100-200元)'] = int(p_100_200['出品数量'].sum())
+
+    # 201-300元
+    p_201_300 = platform_df[(platform_df['商品售价'].astype(float) > 200.0) & (platform_df['商品售价'].astype(float) <= 300.0)]
+    result['平台线下套餐(201-300元)'] = int(p_201_300['出品数量'].sum())
+
+    # 301元以上
+    p_301 = platform_df[platform_df['商品售价'].astype(float) >= 301.0]
+    result['平台线下套餐(301元以上)'] = int(p_301['出品数量'].sum())
     
     return result
 
@@ -175,7 +210,7 @@ class CommissionCalculatorApp:
         title_label = tk.Label(
             self.root, 
             text="提成计算器", 
-            font=("Microsoft YaHei", 24, "bold"),
+            font=(APP_FONT_FAMILY, 24, "bold"),
             fg="#2C3E50"
         )
         title_label.pack(pady=20)
@@ -218,7 +253,7 @@ class CommissionCalculatorApp:
         self.file_listbox = tk.Listbox(
             self.root, 
             height=8,
-            font=("Microsoft YaHei", 10)
+            font=(APP_FONT_FAMILY, 10)
         )
         self.file_listbox.pack(fill="x", padx=20, pady=5)
         
@@ -228,7 +263,8 @@ class CommissionCalculatorApp:
         
         # 创建表格
         columns = ("门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", "特色斗酒36杯",
-                   "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌")
+                   "平台线下套餐(99元)", "平台线下套餐(100-200元)", "平台线下套餐(201-300元)", "平台线下套餐(301元以上)",
+                   "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌", "点舞")
         self.result_tree = ttk.Treeview(
             result_frame, 
             columns=columns, 
@@ -253,7 +289,7 @@ class CommissionCalculatorApp:
         self.status_label = tk.Label(
             self.root, 
             textvariable=self.status_var,
-            font=("Microsoft YaHei", 9),
+            font=(APP_FONT_FAMILY, 9),
             fg="#7F8C8D"
         )
         self.status_label.pack(pady=5)
@@ -313,6 +349,10 @@ class CommissionCalculatorApp:
                     result.get('瓦猫猫听装精酿', 0),
                     result.get('鸡尾酒套餐', 0),
                     result.get('特色斗酒36杯', 0),
+                    result.get('平台线下套餐(99元)', 0),
+                    result.get('平台线下套餐(100-200元)', 0),
+                    result.get('平台线下套餐(201-300元)', 0),
+                    result.get('平台线下套餐(301元以上)', 0),
                     result.get('小吃套餐(59元)', 0),
                     result.get('小吃套餐(79元)', 0),
                     result.get('小吃套餐(99元)', 0),
@@ -320,7 +360,8 @@ class CommissionCalculatorApp:
                     result.get('瓦猫猫二销套餐', 0),
                     result.get('小吃二销套餐', 0),
                     result.get('奔富', 0),
-                    result.get('点歌', 0)
+                    result.get('点歌', 0),
+                    result.get('点舞', 0)
                 ))
             
             self.status_var.set(f"计算完成，共处理 {len(self.results)} 个门店")
@@ -359,11 +400,12 @@ class CommissionCalculatorApp:
             ws['A1'] = "门店提成统计报表"
             ws['A1'].font = Font(size=16, bold=True)
             ws['A1'].alignment = Alignment(horizontal='center')
-            ws.merge_cells('A1:M1')
+            ws.merge_cells('A1:R1')
             
             # 表头
             headers = ["门店", "桶装精酿", "瓦猫猫听装精酿", "鸡尾酒套餐", "特色斗酒36杯",
-                      "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌"]
+                      "平台线下套餐(99元)", "平台线下套餐(100-200元)", "平台线下套餐(201-300元)", "平台线下套餐(301元以上)",
+                      "小吃套餐(59元)", "小吃套餐(79元)", "小吃套餐(99元)", "1升装精酿双拼套餐", "瓦猫猫二销套餐", "小吃二销套餐", "奔富", "点歌", "点舞"]
             for idx, header in enumerate(headers, 1):
                 cell = ws.cell(3, idx, header)
                 cell.font = Font(bold=True)
@@ -377,18 +419,23 @@ class CommissionCalculatorApp:
                 ws.cell(row_idx, 3, data.get('瓦猫猫听装精酿', 0))
                 ws.cell(row_idx, 4, data.get('鸡尾酒套餐', 0))
                 ws.cell(row_idx, 5, data.get('特色斗酒36杯', 0))
-                ws.cell(row_idx, 6, data.get('小吃套餐(59元)', 0))
-                ws.cell(row_idx, 7, data.get('小吃套餐(79元)', 0))
-                ws.cell(row_idx, 8, data.get('小吃套餐(99元)', 0))
-                ws.cell(row_idx, 9, data.get('1升装精酿双拼套餐', 0))
-                ws.cell(row_idx, 10, data.get('瓦猫猫二销套餐', 0))
-                ws.cell(row_idx, 11, data.get('小吃二销套餐', 0))
-                ws.cell(row_idx, 12, data.get('奔富', 0))
-                ws.cell(row_idx, 13, data.get('点歌', 0))
+                ws.cell(row_idx, 6, data.get('平台线下套餐(99元)', 0))
+                ws.cell(row_idx, 7, data.get('平台线下套餐(100-200元)', 0))
+                ws.cell(row_idx, 8, data.get('平台线下套餐(201-300元)', 0))
+                ws.cell(row_idx, 9, data.get('平台线下套餐(301元以上)', 0))
+                ws.cell(row_idx, 10, data.get('小吃套餐(59元)', 0))
+                ws.cell(row_idx, 11, data.get('小吃套餐(79元)', 0))
+                ws.cell(row_idx, 12, data.get('小吃套餐(99元)', 0))
+                ws.cell(row_idx, 13, data.get('1升装精酿双拼套餐', 0))
+                ws.cell(row_idx, 14, data.get('瓦猫猫二销套餐', 0))
+                ws.cell(row_idx, 15, data.get('小吃二销套餐', 0))
+                ws.cell(row_idx, 16, data.get('奔富', 0))
+                ws.cell(row_idx, 17, data.get('点歌', 0))
+                ws.cell(row_idx, 18, data.get('点舞', 0))
             
             # 列宽
             ws.column_dimensions['A'].width = 20
-            for col in 'BCDEFGHIJKLM':
+            for col in 'BCDEFGHIJKLMNOPQR':
                 ws.column_dimensions[col].width = 15
             
             wb.save(filepath)
