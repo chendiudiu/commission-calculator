@@ -1,7 +1,7 @@
 """
 1升装高原青稞计算器 - 门店点餐订单报表分析工具
 统计各门店 1升装高原青稞 的出品数量
-计算逻辑套用「1升装精酿双拼套餐」，但出品数量不除以2
+商品分类为「招牌精酿瓦猫猫的酒」，商品名称含 高原青稞(1L)
 """
 
 import re
@@ -45,9 +45,10 @@ def count_qingke_1l(df: pd.DataFrame) -> int:
     base_filter = base_filter & ~df['支付方式'].astype(str).isin(EXCLUDED_PAYMENT_METHODS)
     base_df = df[base_filter].copy()
 
-    # 商品名称包含高原青稞 且 商品规格为1L（排除100ml试饮、听装/瓶装、一打套餐）
-    qingke_filter = base_df['商品名称'].astype(str).str.contains('高原青稞', na=False)
-    qingke_filter = qingke_filter & base_df['商品规格'].astype(str).str.contains('1L', na=False)
+    # 商品分类为「招牌精酿瓦猫猫的酒」, 商品名称含 高原青稞 且含 (1L)/（1L）
+    qingke_filter = base_df['商品分类'].astype(str).str.strip() == '招牌精酿瓦猫猫的酒'
+    qingke_filter = qingke_filter & base_df['商品名称'].astype(str).str.contains('高原青稞', na=False)
+    qingke_filter = qingke_filter & base_df['商品名称'].astype(str).str.contains(r'[（(]1L[）)]', regex=True, na=False)
     qingke_df = base_df[qingke_filter]
 
     return int(qingke_df['出品数量'].sum())

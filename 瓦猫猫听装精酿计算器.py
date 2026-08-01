@@ -46,6 +46,8 @@ def count_wamaomao_ting(df: pd.DataFrame):
     """
     base_filter = ~df['商品名称'].astype(str).str.contains(r'\[退\]', regex=True, na=False)
     base_filter = base_filter & ~df['支付方式'].astype(str).isin(EXCLUDED_PAYMENT_METHODS)
+    # 商品分类剔除「招牌原浆精酿*」(原浆大桶/套餐不属于瓦猫猫听装精酿)
+    base_filter = base_filter & ~df['商品分类'].astype(str).str.contains('招牌原浆精酿', na=False)
     base_df = df[base_filter].copy()
 
     # 听装: 商品名称包含瓦猫猫 且 商品规格为"听"（含二销套餐内的听装明细）
