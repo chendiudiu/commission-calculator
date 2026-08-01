@@ -26,6 +26,7 @@ jobs:
       run: |
         pyinstaller 提成计算器_windows.spec --distpath ./dist
         pyinstaller 茉莉青提计算器_windows.spec --distpath ./dist
+        pyinstaller 高原青稞计算器_windows.spec --distpath ./dist
     
     - name: Upload main calculator artifact
       uses: actions/upload-artifact@v4
@@ -38,3 +39,9 @@ jobs:
       with:
         name: 茉莉青提计算器-Windows
         path: dist/茉莉青提计算器.exe
+
+    - name: Upload highland barley calculator artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: 高原青稞计算器-Windows
+        path: dist/高原青稞计算器.exe
